@@ -1,6 +1,7 @@
+//Keydown events
 onkeydown = e => {
     if(data.running) {
-
+                                    //Support for azerty keyboards
         if      (e.keyCode == 65)   navigator.language.includes('fr') ? data.player1.drop() : data.player1.speedX = -.02;
         else if (e.keyCode == 68)   data.player1.speedX = .02;
         else if (e.keyCode == 83)   data.player1.speedY = .02;
@@ -20,6 +21,7 @@ onkeydown = e => {
 
     }
 }
+//Keyup events
 onkeyup = e => {
 
     if(data.running) {
