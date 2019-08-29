@@ -62,6 +62,7 @@
 <script src='controlls.js'></script>
 <script>
 
+    //Setting special properties for items and objects
     var objectdata = {};
     var itemdata = {};
     for(var i in models)
@@ -84,6 +85,7 @@
 
 
 
+    //Level start function
     function start(num)
     {
         data.currentlevel = num;
@@ -95,6 +97,7 @@
         get_money(0);
     }
 
+    //To level selection screen
     function tomenu(p)
     {
         drawmenu();
@@ -106,6 +109,7 @@
 
     }
 
+    //Redraw level selection screen
     function drawmenu()
     {
         s('maps').innerHTML = '';
@@ -144,6 +148,8 @@
     }
 
     drawmenu();
+    
+    //Custom CSS for game title and main menu buttons
     for(var i = 0; i < 2; ++i)
     {
         var bum = cr(80,10,'#F5B062', 'translateY('+(i<1?-15:11)+'vmin) rotate('+(i*180)+'deg)');
