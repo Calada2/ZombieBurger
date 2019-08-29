@@ -7,14 +7,14 @@ const cd = classname =>
 }
 
 
-
+//Svg polygon code for character faces
 var faces = [
     '6% 12%,34% 21%,34% 34%,6% 26%,6% 78%,35% 66%,59% 65%,84% 82%,84% 30%,61% 36%,60% 23%,84% 13%,84% 96%,59% 85%,36% 83%,6% 95%,6% 78%',
     '10% 26%,27% 26%,27% 10%,10% 10%,10% 68%,38% 76%,67% 77%,91% 69%,91% 26%,74% 26%,74% 10%,91% 10%,91% 79%,67% 87%,38% 86%,11% 79%,11% 68%'
 ];
 
 
-
+//Function for building character models
 const create_person = (type, facenum, skin, clothes) =>
 {
     var cont = cd('cont');
@@ -75,6 +75,7 @@ const create_person = (type, facenum, skin, clothes) =>
 
 var entities = [];
 
+//Entity class (Players, zombies and customers)
 class Human
 {
     constructor(type,x,y)
@@ -104,6 +105,7 @@ class Human
         this.maxhp = 100;
         this.lastdmg = 0;
 
+        //Set appearance for character
         if(type == 'zombie')
         {
             this.look = create_person(0,0,'green','brown');
@@ -120,6 +122,7 @@ class Human
         }
         else if(type == 'customer')
         {
+            //Generate random order for customer
             this.ordertype = data.ordertypes[~~(data.ordertypes.length*Math.random())];
             this.look = create_person(0,1,Math.random() < .62 ? 'lightgoldenrodyellow' : 'saddlebrown','hsl('+Math.random()*360+'deg,70%,60%)');
             var elem = cd('orderbox');
@@ -147,11 +150,11 @@ class Human
 
 
         if(type == 'zombie')
-        {
+        {   //Find target for zombies
             this.list_targets();
         }
         else if(type == 'customer')
-        {
+        {   //Find place to await order for customers
             this.list_orderplaces();
         }
 
@@ -160,6 +163,7 @@ class Human
 
 
     }
+    //Order countdown
     orderprocess()
     {
         if(data.currentlevel == this.level)
@@ -177,6 +181,7 @@ class Human
         }
 
     }
+    //Move entities by x,y
     move(x,y)
     {
 
@@ -186,12 +191,13 @@ class Human
         this.y += y;
         var blocked = false;
 
-        //TEMP
+        //Keep entities on the map
         if (this.x > data.radX*10) this.x = data.radX*10;
         else if (this.x < -data.radX*10) this.x = -data.radX*10;
         if (this.y > data.radY*10) this.y = data.radY*10;
         else if (this.y < -data.radY*10) this.y = -data.radY*10;
 
+        //Add entity collision if a riot shield is in hand
        for (var i in entities) if (entities[i] != this && entities[i].alive && get_distance(this.x, this.y, entities[i].x, entities[i].y) < 8) {
            if((this.item != null && this.item.type == 'riotshield')||(entities[i].item != null && entities[i].item.type == 'riotshield')) {
 
@@ -202,7 +208,7 @@ class Human
            }
         }
 
-
+        //get angle the entity is facing
         if (!(prevX == this.x && prevY == this.y)) this.angle = (Number((Math.PI) + Math.atan2(prevX - this.x, prevY - this.y)));
         if (!(x == 0 && y == 0)) {
             this.look.style.transform = 'translateX(' + this.x + 'vmin) translateZ(' + this.y + 'vmin) rotateY(' + this.angle + 'rad)';
@@ -210,12 +216,14 @@ class Human
         }
         this.look.style.transformStyle = 'preserve-3d';
 
+        //Store tiles on which the entity is standing and the one it is facing
         var prevTileC = this.currentTile;
         this.currentTile = Math.round(this.x / 10) + '|' + Math.round(this.y / 10);
         var prevTileF = this.focusTile;
 
         this.focusTile = (Math.round(this.x / 10) + Math.round(Math.sin(this.angle))) + '|' + (Math.round(this.y / 10) + Math.round(Math.cos(this.angle)));
 
+        //Update tile information on tile change
         if (prevTileC !== this.currentTile) {
             if (tiles[this.currentTile].object == null || !tiles[this.currentTile].object.solid) {
                 tiles[prevTileC].entities.splice(tiles[prevTileC].entities.indexOf(this.id), 1);
@@ -232,6 +240,7 @@ class Human
                 this.look.style.transform = 'translateX(' + this.x + 'vmin) translateZ(' + this.y + 'vmin) rotateY(' + this.angle + 'rad)';
             }
 
+            //Get tile that is in the direction of the target
             if (this.type == 'zombie') {
                 this.reqmovement = false;
                 var gototile = this.target.currentTile;
@@ -247,6 +256,8 @@ class Human
             }
 
         }
+        
+        //Highlight focus tile
         if (prevTileF !== this.focusTile && (this.type == 'player' || this.type == 'player2')) {
 
             if(tiles[this.focusTile] != undefined)tiles[this.focusTile].look.style.backgroundImage = 'radial-gradient(transparent,gray)';
@@ -259,6 +270,7 @@ class Human
     }
     changetile()
     {
+        //Interact with items left on the ground
         if(tiles[this.currentTile].item !== null)
         {
             if(itemdata[tiles[this.currentTile].item.type].squishable)
@@ -276,8 +288,11 @@ class Human
     }
     getdmg(amount,angle)
     {
+        //Get damage by something
+        
         if(this.item != null && this.item.type == 'riotshield' && this.item.ammo > 0)
         {
+            //Ignore damage if riot shield is held
             this.item.ammo -= amount/6;
             this.look.ammobar.style.setProperty('--prog', (this.item.ammo / this.item.maxammo) * 100 + '%');
             if(this.item.ammo <= 0)
@@ -307,6 +322,8 @@ class Human
     {
         if(this.alive)
         {
+            //Entity death
+            //Remove from game and replace with zombie if ressurect is true
             tiles[this.currentTile].entities.splice(tiles[this.currentTile].entities.indexOf(this.id), 1);
             if(this.type == 'zombie')get_money(10);
             this.alive = false;
@@ -326,10 +343,11 @@ class Human
     }
     startuse()
     {
+        //Press interaction button
 
         if(!this.active) {
-
-
+    
+            //Cut vegetables and meat
             if (tiles[this.focusTile].object != null && tiles[this.focusTile].object.type == 'counter' && !tiles[this.focusTile].object.inuse && this.item != null && this.item.type == 'knife' &&  tiles[this.focusTile].object.item != null && ['tomato', 'cheese', 'lettuce', 'onion', 'meat', 'zombiemeat'].includes(tiles[this.focusTile].object.item.type)) {
                 this.look.hand.style.animation = 'cutting .4s linear infinite';
                 this.activefocus = this.focusTile;
@@ -343,6 +361,7 @@ class Human
                 this.look.progbar.style.opacity = .85;
             }
 
+            //Replenish ammo and fix riot shield
             else if (tiles[this.focusTile].object != null && tiles[this.focusTile].object.type == 'ammobox' && !tiles[this.focusTile].object.inuse &&  tiles[this.focusTile].object.item != null && (tiles[this.focusTile].object.item.type == 'pistol' || tiles[this.focusTile].object.item.type == 'riotshield') && tiles[this.focusTile].object.item.ammo != tiles[this.focusTile].object.item.maxammo ) {
                 this.activefocus = this.focusTile;
                 this.activeitem = this.item;
@@ -355,10 +374,12 @@ class Human
                 this.look.progbar.style.opacity = .85;
             }
 
+            //Pull lever
             else if (tiles[this.focusTile].object != null && tiles[this.focusTile].object.type == 'lever')
             {
                 change_barriercolor();
             }
+            //Give food to customer
             else if(this.item != null && (this.item.type == 'bowl' || this.item.type == 'hamburger') && customer_present(this.focusTile))
             {
                 var cus = entities[customer_present(this.focusTile)];
@@ -383,6 +404,7 @@ class Human
                     }
                 }
             }
+            //Use knife as weapon
             else if(!(tiles[this.focusTile].object != null && tiles[this.focusTile].object.type == 'counter') && this.item != null && this.item.type == 'knife')
             {
                 this.look.hand.style.animation = 'cutting .5s linear';
@@ -397,6 +419,7 @@ class Human
                 }
 
             }
+            //Use pistol
             else if(this.item != null && this.item.type == 'pistol' && this.item.ammo > 0)
             {
                 --this.item.ammo;
@@ -413,6 +436,7 @@ class Human
     }
     stopuse()
     {
+        //Stop interaction
         this.look.hand.style.animation = 'none';
         clearInterval(this.progressinterval);
         this.actionprogress = 0;
@@ -423,10 +447,13 @@ class Human
     }
     releaseuse()
     {
+        //Release interact button
         if(this.actioncont) this.stopuse();
     }
+    //Finish interaction
     finishuse()
     {
+        //Cut vegetable/meat
         if(tiles[this.focusTile].object.type == 'counter' && ['tomato','cheese','lettuce','onion','meat','zombiemeat'].includes(tiles[this.focusTile].object.item.type))
         {
             var name = tiles[this.focusTile].object.item.type + 'slices';
@@ -435,12 +462,14 @@ class Human
             tiles[this.focusTile].object.item.del();
             tiles[this.focusTile].object.place_item(new Item(name));
         }
+        //Replenish ammo
         else if (tiles[this.focusTile].object.type == 'ammobox')
         {
             tiles[this.focusTile].object.item.ammo = tiles[this.focusTile].object.item.maxammo;
             if(tiles[this.focusTile].object.item.type == 'riotshield') tiles[this.focusTile].object.item.look.lastChild.style.opacity = .8;
         }
     }
+    //Countdown to interaction finish
     addprogress(me)
     {
         if(me.activefocus != me.focusTile || me.item != me.activeitem) me.stopuse();
@@ -460,13 +489,16 @@ class Human
 
 
     }
+    //Press pick up button
     equip()
     {
         if(tiles[this.focusTile] != undefined) {
 
 
+            //Pickup item
             if (tiles[this.focusTile].item != null) {
                 if (this.item != null) {
+                    //If hand is not empty, replace held item
                     var handitem = this.item;
                     this.item = tiles[this.focusTile].item;
                     tiles[this.focusTile].item = null;
@@ -480,6 +512,7 @@ class Human
                 }
 
             }
+            //Pick up item from object
             else if (tiles[this.focusTile].object != null && !tiles[this.focusTile].object.inuse && tiles[this.focusTile].object.item != null && tiles[this.focusTile].object.type != 'crate') {
                 if (this.item != null) {
                     if (tiles[this.focusTile].object != null && tiles[this.focusTile].object.type != 'grinder') {
@@ -496,6 +529,7 @@ class Human
                     this.look.hand.appendChild(this.item.look);
                 }
             }
+            //Get item from crate (Infinite item container)
             else if (tiles[this.focusTile].object != null && tiles[this.focusTile].object.type == 'crate') {
                 if (this.item == null) {
                     this.item = new Item(tiles[this.focusTile].object.itemtype);
@@ -503,6 +537,7 @@ class Human
                 }
             }
 
+            //Display ammo bar
             if (this.item != null && (this.item.type == 'pistol' || this.item.type == 'riotshield')) {
                 this.look.ammobar.style.opacity = .85;
                 this.look.ammobar.style.setProperty('--prog', (this.item.ammo / this.item.maxammo) * 100 + '%');
@@ -513,38 +548,46 @@ class Human
         }
 
     }
+    //Press drop button
     drop()
     {
         if(tiles[this.focusTile] != undefined) {
-            if (this.item != null) {
+            if (this.item != null) {          
                 if (tiles[this.focusTile].item == null && tiles[this.focusTile].object == null) {
+                    //Drop item on ground
                     tiles[this.focusTile].item_dropped(this.item);
                     this.item = null;
                 }
                 else if (tiles[this.focusTile].item != null && itemdata[tiles[this.focusTile].item.type].cancombine.includes(this.item.type) && !tiles[this.focusTile].item.full) {
+                   //Combine item with one on the ground
                     tiles[this.focusTile].item.combine(this.item);
                     this.item.del();
                     this.item = null;
                 }
                 else if (tiles[this.focusTile].object != null && !tiles[this.focusTile].object.inuse && objectdata[tiles[this.focusTile].object.type].placeitems && tiles[this.focusTile].object.item == null) {
+                    //Drop item on object
                     tiles[this.focusTile].object.place_item(this.item);
                     this.item = null;
                 }
                 else if (tiles[this.focusTile].object != null && !tiles[this.focusTile].object.inuse && tiles[this.focusTile].object.item != null && itemdata[tiles[this.focusTile].object.item.type].cancombine.includes(this.item.type) && !tiles[this.focusTile].object.item.full) {
+                    //Combine item with one on object
                     tiles[this.focusTile].object.item.combine(this.item);
                     this.item.del();
                     this.item = null;
                 }
                 else if (tiles[this.focusTile].object != null && tiles[this.focusTile].object.type == 'bin') {
+                    //Get rid of item
                     this.item.del();
                     this.item = null;
                 }
 
+                //Hide ammobar
                 if (this.item == null) this.look.ammobar.style.opacity = 0;
 
             }
         }
     }
+    //List possible targets for zombies
     list_targets()
     {
         var targets = [];
@@ -554,11 +597,13 @@ class Human
         }
         if(targets.length == 0)
         {
+            //If none avilable try again later
             var this2 = this;
             setTimeout(()=>{this2.list_targets()},1000);
         }
         else this.select_target(targets);
     }
+    //Select one from possible targets
     select_target(targets)
     {
         var num = ~~(targets.length * Math.random());
@@ -571,6 +616,7 @@ class Human
         }
         else this.goto_tile(tile);
     }
+    //List places to wait for order as customer
     list_orderplaces()
     {
         var places = [];
@@ -582,6 +628,7 @@ class Human
         this.target_tile(tile[0],tile[1]);
 
     }
+    //Get shortest path to a tile
     target_tile(targetX,targetY)
     {
         var tilenums = [];
@@ -664,16 +711,9 @@ class Human
         }
 
 
-
-        if(gototile == undefined && this.type == 'zombie')
-        {
-            var this2=this;
-            setTimeout(()=>{this2.list_targets()},500);
-        }
-
-
         return gototile;
     }
+    //Go to a certain tile
     goto_tile(tile)
     {
         if(tile == undefined) tile = this.currentTile;
@@ -685,10 +725,12 @@ class Human
 
 
     }
+    //Move function for npcs
     reqmove(delta)
     {
         if(this.type == 'zombie')
         {
+            //Damage entities too close to zombies
             for(var i of entities)
             {
                 if(i.alive && i.type != 'zombie' && get_distance(this.x,this.y,i.x,i.y) < 10)
@@ -738,14 +780,13 @@ class Human
 
 }
 
-
-//function addtilenum(tilenums,numaspos,)
-
+//Set size of div
 function setsize(elem, width, height)
 {
     elem.style.setProperty('--w',width + 'vmin');
     elem.style.setProperty('--h',height + 'vmin');
 }
+//Tile class
 class Tile
 {
     constructor(x,y)
@@ -764,6 +805,7 @@ class Tile
         this.entities = [];
         s('cont').appendChild(this.look);
     }
+    //Item dropped on tile
     item_dropped(item)
     {
         this.item = item;
@@ -771,6 +813,7 @@ class Tile
         this.itemelem.style.transform = 'translateZ(1.5vmin) rotateX(-90deg)';
         this.itemelem.style.transformStyle = 'preserve-3d';
     }
+    //Object placed on tile
     place_object(object)
     {
         this.object = object;
@@ -784,6 +827,7 @@ class Tile
 
 
 var items = [];
+//Item class
 class Item
 {
     constructor(type)
@@ -800,8 +844,10 @@ class Item
 
 
     }
+    //Combine items together
     combine(item)
     {
+        //Fill bowl to make salad
         if(this.type == 'bowl')
         {
             if(this.data.inside == undefined)
@@ -813,6 +859,7 @@ class Item
             this.look.style.setProperty('--l' + this.data.inside.length, color);
             if(this.data.inside.length > 4)this.full = true;
         }
+        //Fill bun to make hamburger
         else if(this.type == 'hamburger')
         {
             if(this.data.inside == undefined)
@@ -829,6 +876,7 @@ class Item
             this.look.style.setProperty('--l', this.data.inside.length);
             //if(this.data.inside.length > 4)this.full = true;
         }
+        //Apply weapon skins
         if(this.type == 'knife' || this.type == 'pistol' || this.type == 'riotshield')
         {
 
@@ -837,21 +885,25 @@ class Item
             else this.look.style.setProperty('--color', color);
         }
     }
+    //Delete item
     del()
     {
         this.look.remove();
     }
 }
 
+//Return original name of cut food
 function convert_name(item)
 {
     return item == 'lettuceslices' ? 'lettuce' : (item == 'tomatoslices' ? 'tomato' : (item == 'onionslices' ? 'onion' : (item == 'cheeseslices' ? 'cheese' : (item == 'burger' ? 'meat' : 'zombiemeat'))));
 }
+//Return color of food
 function get_color(item)
 {
     return item == 'lettuceslices' ? '#00A300' : (item == 'tomatoslices' ? 'red' : (item == 'onionslices' ? 'purple' : (item == 'cheeseslices' ? 'yellow' : (item == 'burger' ? 'saddlebrown' : '#004C00'))));
 }
 var objects = [];
+//Object class
 class Furniture
 {
     constructor(type, data2)
@@ -912,11 +964,13 @@ class Furniture
         }
 
     }
+    //Place item on object
     place_item(item)
     {
         this.item = item;
         this.itemelem.appendChild(item.look);
     }
+    //Check for entities to process
     grindercheck()
     {
 
@@ -943,6 +997,7 @@ class Furniture
                     this.target.look.progbar.style.setProperty('--prog', this.targetprog+'%');
                     if(this.targetprog >= 100)
                     {
+                        //If entity was here for long enough it turns into meat
                         var t = this.data.tile.split('|');
                         particle_spawn(t[0]*10,t[1]*10,'red',1.7);
                         this.target.die(false);
@@ -962,6 +1017,7 @@ class Furniture
         var this2 = this;
         setTimeout(()=>{this2.grindercheck()},80);
     }
+    //Check if item is placed on stove
     stovecheck()
     {
         if(this.target == null && this.item != null && ['rawburger','rawzombieburger','burger','zombieburger'].includes(this.item.type))
@@ -978,6 +1034,7 @@ class Furniture
                 this.look.lastChild.style.setProperty('--prog',++this.targetprog+'%');
                 if(this.targetprog >= 100)
                 {
+                    //If item is placed for long enough turn it into another item
                     var item = {rawburger:'burger',rawzombieburger:'zombieburger',burger:'burntburger',zombieburger:'burntburger'}[this.item.type];
                     this.item.look.remove();
                     this.place_item(new Item(item));
@@ -994,6 +1051,7 @@ class Furniture
         var this2 = this;
         setTimeout(()=>{this2.stovecheck()},80);
     }
+    //Spawn zombies
     portalcheck()
     {
         if(data.currentlevel == this.level)
@@ -1013,6 +1071,7 @@ class Furniture
         }
 
     }
+    //Spawn customers
     portal2check()
     {
         if(data.currentlevel == this.level)
@@ -1035,9 +1094,11 @@ class Furniture
 
 }
 
+
 const get_distance = (x1, y1, x2, y2) => Math.hypot(x2-x1,y2-y1);
 
 var projectiles = [];
+//Projectile (bullet) class
 class Projectile
 {
     constructor(x,y,angle,parent)
@@ -1056,6 +1117,7 @@ class Projectile
         s('cont').appendChild(this.look);
 
     }
+    //Move bullet
     move(delta)
     {
         this.x += Math.sin(this.angle) * delta / 30;
@@ -1077,6 +1139,7 @@ class Projectile
         if(tiles[Math.round(this.x / 10) + '|' + Math.round(this.y  / 10)] != undefined)var tileobj = tiles[Math.round(this.x / 10) + '|' + Math.round(this.y  / 10)].object;
         if(tileobj != null && tileobj.type == 'counter' && tileobj.item != null && tileobj.item.type == 'knife' && this.x % 10 < .5 && this.x % 10 > -.5 && this.y % 10 < .5 && this.y % 10 > -.5)
         {
+            //If bullet hits a knife on a counter it splits into two parts
             projectiles.push(new Projectile(this.x + Math.sin(this.angle + .5) * 2,this.y + Math.cos(this.angle + .5) * 2,this.angle + .5, this.parent));
             projectiles.push(new Projectile(this.x + Math.sin(this.angle - .5) * 2,this.y + Math.cos(this.angle - .5) * 2,this.angle - .5, this.parent));
             this.die();
@@ -1085,6 +1148,7 @@ class Projectile
         if(this.x > data.radX*10+5 || this.x < -(data.radX*10+5) || this.y > data.radY*10+5 || this.y < -(data.radY*10+5)) this.die();
 
     }
+    //Remove projectile
     die()
     {
         if(this.active)
@@ -1097,6 +1161,7 @@ class Projectile
     }
 }
 
+//Spawn particle effects
 function particle_spawn(x,y,color,size)
 {
     var look = cr(1,1,color,'translateX(var(--x)) translateY(var(--y)) translateZ(var(--z))');
@@ -1132,6 +1197,7 @@ function particle_spawn(x,y,color,size)
 
 },50);
 }
+//Check if customer is on certain tile
 function customer_present(tile)
 {
     for(var i in entities) if(entities[i].type == 'customer' && entities[i].alive && entities[i].currentTile == tile) return i;
@@ -1143,13 +1209,14 @@ function customer_present(tile)
 
 var data = {};
 
-data.multi = true;
-data.barriercolor = 'blue';
+data.multi = true;//Multiplayer
+data.barriercolor = 'blue';//Current barrier active (blue or red)
 
-var get_money = amount => s('money').innerHTML = (data.money += amount) + '$';
+var get_money = amount => s('money').innerHTML = (data.money += amount) + '$'; //Get money
 
 
 var prevtime = +new Date();
+//Call movemetns of players npcs and projectiles
 function gameloop()
 {
     var dtime = +new Date() - prevtime;
@@ -1200,7 +1267,7 @@ gameloop();
 
 
 
-
+//Change current barrier type
 function change_barriercolor()
 {
     for(var i in tiles)
@@ -1235,6 +1302,7 @@ function change_barriercolor()
 
 var tiles = [];
 
+//Load level and apply its properties to the game
 function loadlevel(level)
 {
     for(var i in level)data[i] = level[i];
@@ -1272,7 +1340,7 @@ function loadlevel(level)
     s('cont').appendChild(cr(data.radY*20+10,30,'radial-gradient(white,black)','rotateY(-90deg) translateY(-15vmin) translateZ('+(-data.radX*10-5)+'vmin)'));
 }
 
-
+//Level countdown
 function leveltimer()
 {
     --data.time;
@@ -1287,6 +1355,7 @@ function leveltimer()
     }
 }
 s('end').hidden = true;
+//Finish level
 function wingame()
 {
     endgame();
@@ -1315,12 +1384,14 @@ function wingame()
     if(l<8 && data.money > levels[l].money1)savefile[l+1][0]=1;
     save();
 }
+//Die in level
 function losegame()
 {
     endgame();
     s('win').hidden = true;
     s('lost').hidden = false;
 }
+//Stops certain processes that run while playing on a level
 function endgame()
 {
     clearInterval(data.timer);
@@ -1333,18 +1404,20 @@ function endgame()
     }
     s('lvl').innerHTML = 'Level ' + (1+l);
 }
+//Save game
 function save()
 {
     localStorage.p93 = JSON.stringify(savefile);
 }
 
+//Level data
 var levels = [
         {//lvl1
-            p1:[0,0],
-            p2:[10,0],
-            radX: 3,
-            radY: 2,
-            obj: [
+            p1:[0,0], //Player1 spawn point
+            p2:[10,0], //Player2 spawn point
+            radX: 3,    //Level width is radX*2+1
+            radY: 2,    //Level height is radY*2+1
+            obj: [      //Add objects to level
                 ['customerportal',-3,-2],
                 ['bin',3,1],
                 ['crate',3,-2,{type: 'tomato'}],
@@ -1358,21 +1431,22 @@ var levels = [
                 ['counter',2,2,{type: 'line'}],
                 ['counter',3,2,{type: 'end', rot:180}]
             ],
-            items:
+            items:  //Add items to level
                 [
                     ['knife',-1,2],
                     ['knife',1,2]
                 ],
-            ordertypes: ['Salad'],
-            salading: ['lettuce','tomato'],
-            burgering: [],
-            maxzombies: 0,
-            ordermax: 2,
-            money1: 100,
-            money2: 200,
-            money3: 300,
-            time: 120,
-            ordertiles: [[-3,0],[-2,0]],
+            ordertypes: ['Salad'], //Types of food customers can order
+            salading: ['lettuce','tomato'], //Salad ingredients customers can order
+            burgering: [],//Burger ingredients customers can order
+            maxzombies: 0,//Maximum amount of zombies that can be present
+            ordermax: 2,//Maximum legth of orders
+            money1: 100, //Money needed for 1 star
+            money2: 200, //Money needed for 2 stars
+            money3: 300, //Money needed for 3 stars
+            time: 120, //Level length in seconds
+            ordertiles: [[-3,0],[-2,0]], //Tiles customers will go to
+            //Message to display in corner
             msg: 'You own a restaurant specialized in salads! Pick up vegetables from the barrels, drop them on a counter, pick up a knife and hold the interaction button to cut them. After this put a bowl on the counter and DROP the sliced veggies into the bowl. When done pick it up and interact with the customer who ordered it'
         },
     {//lvl2
@@ -1771,5 +1845,5 @@ var levels = [
     }
     ];
 
-//Save structure for 9 levels 0: Level unlocked 1,2,3: Stars earned 4:High score
+//Load or create save file
 var savefile = localStorage.p93 != undefined ? JSON.parse(localStorage.p93) : [[1,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]];
